@@ -23,35 +23,53 @@ public class Function
     {
         try
         {
-            var test = context.ClientContext.Environment[""];
+            var awsClientId = context.ClientContext.Environment["aws_client_id"];
+            var awsUserPoolId = context.ClientContext.Environment["aws_pool_id"];
 
             var cognitoClient = new AmazonCognitoIdentityProviderClient(new BasicAWSCredentials("", ""), RegionEndpoint.USEast2);
 
 
             var signupRequest = new SignUpRequest()
             {
-                ClientId = "aws client id",
+                ClientId = awsClientId,
                 Password = input.Password,
                 Username = input.Email,
             };
-            var attributeCpf = new AttributeType
+            signupRequest.UserAttributes.Add(new AttributeType
             {
                 Name = "custom:CPF",
                 Value = input.CPF
-            };
-            signupRequest.UserAttributes.Add(attributeCpf);
-
+            });
+            signupRequest.UserAttributes.Add(new AttributeType()
+            {
+                Name = "custom:GroupAccess",
+                Value = input.AccessGroup.ToString()
+            });
+            
             var cognitoUser = await cognitoClient.SignUpAsync(signupRequest);
+
+            await cognitoClient.AdminAddUserToGroupAsync(new AdminAddUserToGroupRequest()
+            {
+                GroupName = input.AccessGroup.ToString(),
+                Username = signupRequest.Username,
+                UserPoolId =  awsUserPoolId
+            });
+
+            if (input.AccessGroup is UserRequestGroup.Funcionario or UserRequestGroup.Admin)
+            {
+                await cognitoClient.AdminConfirmSignUpAsync(new AdminConfirmSignUpRequest()
+                {
+                    Username = signupRequest.Username,
+                    UserPoolId = awsUserPoolId,
+                });
+            }
+            
             return cognitoUser.UserSub;
-
-
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
             throw;
         }
-
-        return "";
     }
 }
