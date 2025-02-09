@@ -20,6 +20,6 @@ public class FunctionTest
         };
         var upperCase = function.FunctionHandler(request, context);
 
-        Assert.Equal("HELLO WORLD", upperCase);
+        Assert.Equal(true, false);
     }
 }
